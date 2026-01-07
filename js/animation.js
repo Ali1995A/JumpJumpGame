@@ -46,7 +46,7 @@ function move(context) {
         context.stroke();
     }
     if (mouseX == null) {
-        context.drawImage(Rdoodle, Player.x, Player.y);
+        drawSprite(Rdoodle, Player.x, Player.y, false);
     }
 
 
@@ -71,18 +71,18 @@ function move(context) {
     if (Player.direction == 1) {
 
         if (chara == 1) {
-            context.drawImage(Rdoodle, Player.x, Player.y);
+            drawSprite(Rdoodle, Player.x, Player.y, false);
         }
         else if (chara == 2) {
-            context.drawImage(Rfrog, Player.x, Player.y);
+            drawSprite(Rfrog, Player.x, Player.y, false);
         }
     }
     if (Player.direction == 0) {
         if (chara == 1) {
-            context.drawImage(Ldoodle, Player.x, Player.y);
+            drawSprite(Rdoodle, Player.x, Player.y, true);
         }
         else if (chara == 2) {
-            context.drawImage(Lfrog, Player.x, Player.y);
+            drawSprite(Rfrog, Player.x, Player.y, true);
         }
     }
 }
@@ -115,45 +115,36 @@ function gamescroll() {
         Player.y += distance / 2;
         GameData.score += distance / 20;
     }
-    if (GameData.score >= 150) {
-        ChangeBasis = 150;
-        GameData.level = 50;
-        GameData.probability = 25;
-    }
-    if (GameData.score >= 300) {
-        ChangeBasis = 150;
-        GameData.level = 50;
-        GameData.probability = 40;
-    }
-    if (GameData.score >= 500) {
-        ChangeBasis = 130;
-        GameData.level = 60;
-        GameData.probability = 50;
-        
-        Ldoodle.src = "img/Ldoodlenew.png";
-        Rdoodle.src = "img/Rdoodlenew.png";
-        Lfrog.src = "img/Lfrognew.png";
-        Rfrog.src = "img/Rfrognew.png";
 
-    }
-    if (GameData.score >= 700) {
-        ChangeBasis = 110;
-        GameData.level = 75;
-        GameData.probability = 60;
-    }
-    if (GameData.score >= 1000) {
-        ChangeBasis = 90;
-        GameData.level = 100;
-        GameData.probability = 75;
-        
-    }
-    if (GameData.score >= 1300) {
-        ChangeBasis = 80;
-        GameData.level = 120;
-        GameData.probability = 90;
+    updateDifficulty();
+
+    if (GameData.score >= 500 && !window.__skinSwapped500) {
+        window.__skinSwapped500 = true;
+        if (typeof setImageWithFallback === "function") {
+            setImageWithFallback(Ldoodle, "img/jett_left_2.png", Ldoodle.src);
+            setImageWithFallback(Rdoodle, "img/jett_right_2.png", Rdoodle.src);
+            setImageWithFallback(Lfrog, "img/rubble_left_2.png", Lfrog.src);
+            setImageWithFallback(Rfrog, "img/rubble_right_2.png", Rfrog.src);
+        }
     }
 
     if (panelgroup[0].y > Height) {
         panelgroup.shift();
     }
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function updateDifficulty() {
+    var score = GameData.score || 0;
+    var t = clamp(score / 1300, 0, 1);
+    var eased = Math.pow(t, 1.35);
+
+    GameData.jumpheight = Math.round(17 - eased * 4); // 17 -> 13
+    GameData.level = Math.round(22 + eased * 98); // 22 -> 120
+    GameData.probability = Math.round(eased * 90); // 0 -> 90
+
+    ChangeBasis = Math.round(240 - eased * 160); // 240 -> 80
 }

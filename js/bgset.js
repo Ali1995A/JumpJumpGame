@@ -1,6 +1,34 @@
-var canvas = document.getElementById("canvas");
-var Height = window.screen.height * 0.8;
-var Width = Math.min(window.screen.height * 0.6,window.screen.width)*0.8;
-canvas.height = Height;
-canvas.width = Width;
-var ChangeBasis = 170;
+var ChangeBasis = 240;
+
+(function () {
+    function getViewportHeight() {
+        if (window.visualViewport && typeof window.visualViewport.height === "number") {
+            return window.visualViewport.height;
+        }
+        return window.innerHeight;
+    }
+
+    function setViewportUnit() {
+        var vh = getViewportHeight() * 0.01;
+        document.documentElement.style.setProperty("--vh", vh + "px");
+    }
+
+    function detectWeChat() {
+        return /MicroMessenger/i.test(navigator.userAgent);
+    }
+
+    setViewportUnit();
+
+    if (detectWeChat()) {
+        document.documentElement.classList.add("is-wechat");
+    }
+
+    window.addEventListener("orientationchange", function () {
+        setTimeout(setViewportUnit, 50);
+    });
+    window.addEventListener("resize", setViewportUnit);
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", setViewportUnit);
+    }
+})();

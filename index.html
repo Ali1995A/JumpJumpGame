@@ -2,29 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">  <link rel="stylesheet" href="css/index.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="css/index.css">
 </head>
-<script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
 <body>
-  
-<script src="js/bgset.js"></script>
 <div id="container">
   <canvas id="canvas">
     Ops! Your web doesn't support canvas!
   </canvas>
-  <div style="position:relative;top:-220px">
-    <button id="startBTN" type="button" class="btn"  style="cursor:pointer;background-color: green;width: 82px;height: 36px;color: #FFFFFF;border-radius:2em;border:2px solid black">
-      <div style = "cursor:pointer">Start Game</div>
-    </button>
+  <div id="overlay">
+    <div class="role-select">
+      <div class="role-card" id="roleDoodle">
+        <img class="role-img" src="img/jett_right.png" alt="乐迪" onerror="this.onerror=null;this.src='img/Rdoodle.png'">
+        <button id="startBTN" type="button" class="btn" style="cursor:pointer;border-radius:2em;border:2px solid black;padding: 10px 18px">
+          <div style="cursor:pointer">Start (乐迪)</div>
+        </button>
+      </div>
+      <div class="role-card" id="roleFrog">
+        <img class="role-img" src="img/rubble_right.png" alt="小砾" onerror="this.onerror=null;this.src='img/Rfrog.png'">
+        <button id="startBTN2" type="button" class="btn" style="cursor:pointer;border-radius:2em;border:2px solid black;padding: 10px 18px">
+          <div style="cursor:pointer">Start (小砾)</div>
+        </button>
+      </div>
+    </div>
   </div>
-  <div style="position:relative;top:-118px">
-    <button id="startBTN2" type="button" class="btn"  style="cursor:pointer;background-color: green;width: 82px;height: 36px;color: #FFFFFF;border-radius:2em;border:2px solid black">
-      <div style = "cursor:pointer">Start Game</div>
-    </button>
-  </div>
-
-
 </div >
+<script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
+<script src="js/bgset.js"></script>
 <script src="js/GameData.js"></script>
 <script src="js/random.js"></script>
 <script src="js/panel.js"></script>

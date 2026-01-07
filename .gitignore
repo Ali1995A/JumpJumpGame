@@ -1,0 +1,8 @@
+# Local image artifacts (not part of the web app)
+transparent_output*.png
+ChatGPT Image*.png
+
+# OS / tooling
+.DS_Store
+Thumbs.db
+

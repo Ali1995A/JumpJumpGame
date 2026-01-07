@@ -1,11 +1,14 @@
 var panelgroup = [];
 function getRamNumber(){
-    var result='';
-    for(var i=0;i<2;i++){
-    result+=Math.floor(Math.random()*16).toString(16);//获取0-15并通过toString转16进制
-    }
-     
-    return '#'+result.toLowerCase()+"aa66";
+    var palette = [
+        "#ff4aa6",
+        "#ff6eb4",
+        "#ff86c2",
+        "#ff9ad0",
+        "#ff66cc",
+        "#ff7aa2"
+    ];
+    return palette[Random(0, palette.length - 1)];
 }
 function CreatePanel(context) {
     if(panelgroup[panelgroup.length-1].y >=0){
@@ -24,10 +27,15 @@ function CreatePanel(context) {
             var status = 1;
         }
 
-        var PanelX = Random(40,canvas.width - 80);
+        var PanelX = Random(40, Width - 80);
         var PanelY = minHeight - Random(GameData.level,140);
         var PanelColor = getRamNumber();
-        var PanelLength = Random(30,60);
+
+        var t = Math.max(0, Math.min(1, (GameData.score || 0) / 1300));
+        var eased = Math.pow(t, 1.1);
+        var minLen = Math.round(42 - eased * 12); // 42 -> 30
+        var maxLen = Math.round(70 - eased * 10); // 70 -> 60
+        var PanelLength = Random(minLen, maxLen);
 
         panelgroup.push({
             x:PanelX,
