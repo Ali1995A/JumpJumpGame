@@ -28,6 +28,19 @@
         </button>
       </div>
     </div>
+    <div id="pausePrompt" class="overlay-prompt" style="display:none">
+      <div class="overlay-prompt-card">
+        已暂停<br>点击屏幕开始
+      </div>
+    </div>
+    <div id="gameOverModal" class="overlay-modal" style="display:none">
+      <div class="overlay-modal-card">
+        <div class="overlay-modal-title">Game Over</div>
+        <div id="gameOverScore" class="overlay-modal-score"></div>
+        <input id="playerNameInput" class="overlay-input" placeholder="昵称（可选）" maxlength="24" />
+        <button id="restartBTN" type="button" class="btn overlay-btn">再来一局</button>
+      </div>
+    </div>
   </div>
 </div >
 <script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>

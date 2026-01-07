@@ -8,6 +8,16 @@ var __dpr = 1;
 var __backgroundPattern = null;
 var __gameStarted = false;
 var __resizeTimer = null;
+var __gameState = "menu"; // menu | ready | running | gameover
+var __rafId = null;
+
+var __overlay = null;
+var __roleSelect = null;
+var __pausePrompt = null;
+var __gameOverModal = null;
+var __gameOverScoreEl = null;
+var __playerNameInput = null;
+var __restartBTN = null;
 
 function getViewportRect() {
     if (window.visualViewport) {
@@ -78,6 +88,10 @@ function resizeCanvas(preserveGameState) {
 
     if (!__gameStarted && __backgroundPattern && typeof drawWelcomeScreen === "function") {
         drawWelcomeScreen();
+    }
+
+    if (preserveGameState && __gameState !== "running" && __gameState !== "menu") {
+        renderStaticFrame();
     }
 }
 
@@ -233,109 +247,226 @@ function drawWelcomeScreen() {
     context.drawImage(Select, Player.x + 30 - 100, Player.y + 60);
 }
 
+function cancelGameLoop() {
+    if (__rafId != null) {
+        window.cancelAnimationFrame(__rafId);
+        __rafId = null;
+    }
+}
+
+function syncOverlayVisibility() {
+    if (!__overlay) return;
+    if (__roleSelect) __roleSelect.style.display = (__gameState === "menu") ? "flex" : "none";
+    if (__pausePrompt) __pausePrompt.style.display = (__gameState === "ready") ? "flex" : "none";
+    if (__gameOverModal) __gameOverModal.style.display = (__gameState === "gameover") ? "flex" : "none";
+}
+
+function setGameState(nextState) {
+    __gameState = nextState;
+    __gameStarted = nextState !== "menu";
+    syncOverlayVisibility();
+}
+
+function resetSkinsToDefault() {
+    window.__skinSwapped500 = false;
+    if (typeof setImageWithFallback === "function") {
+        setImageWithFallback(Ldoodle, "img/jett_left.png", "img/Ldoodle.png");
+        setImageWithFallback(Rdoodle, "img/jett_right.png", "img/Rdoodle.png");
+        setImageWithFallback(Lfrog, "img/rubble_left.png", "img/Lfrog.png");
+        setImageWithFallback(Rfrog, "img/rubble_right.png", "img/Rfrog.png");
+    }
+}
+
+function resetGameData() {
+    GameData.score = 0;
+    GameData.jumpheight = 17;
+    GameData.level = 22;
+    GameData.speed = 0;
+    GameData.probability = 0;
+
+    Player.direction = 1;
+    Player.condition = 0;
+    Player.Yacceleration = 0;
+
+    mouseX = null;
+    mouseY = null;
+
+    if (Array.isArray(panelgroup)) panelgroup.length = 0;
+    resetSkinsToDefault();
+}
+
+function drawPlatforms(context) {
+    if (!Array.isArray(panelgroup)) return;
+    context.lineWidth = 6;
+    context.lineCap = "round";
+    for (let i = 0; i < panelgroup.length; i++) {
+        var PanelX = panelgroup[i].x;
+        var PanelY = panelgroup[i].y;
+        var status = panelgroup[i].status;
+        var pcolor = panelgroup[i].pcolor;
+        var plength = panelgroup[i].plength;
+        context.beginPath();
+        context.moveTo(PanelX - plength / 2, PanelY);
+        context.lineTo(PanelX + plength / 2, PanelY);
+        context.strokeStyle = status ? pcolor : "#c4c4c4";
+        context.stroke();
+    }
+}
+
+function drawPlayerStatic() {
+    var sprite = (chara === 2) ? Rfrog : Rdoodle;
+    var facingLeft = Player.direction === 0;
+    drawSprite(sprite, Player.x, Player.y, facingLeft);
+}
+
+function renderStaticFrame() {
+    context.clearRect(0, 0, Width, Height);
+    if (__backgroundPattern) {
+        context.fillStyle = __backgroundPattern;
+        context.fillRect(0, 0, Width, Height);
+    }
+
+    context.font = "bold 20px Arial";
+    context.textAlign = "left";
+    context.fillStyle = "#ff2f98";
+    context.fillText("Score: " + parseInt(GameData.score), 20, 30);
+
+    drawPlatforms(context);
+    drawPlayerStatic();
+}
+
+function beginGame(selectedChara) {
+    if (__gameState !== "menu") return;
+
+    cancelGameLoop();
+    resetGameData();
+
+    chara = selectedChara;
+    Player.x = Width / 2 - PLAYER_W / 2;
+    Player.y = Height - (selectedChara === 1 ? 220 : 170);
+
+    panelgroup.push({
+        x: Player.x + PLAYER_W / 2,
+        y: Player.y + 90,
+        status: 1,
+        pcolor: "#ff4aa6",
+        plength: 60
+    });
+
+    setGameState("ready");
+    renderStaticFrame();
+}
+
+function startRunning() {
+    if (__gameState !== "ready") return;
+    Player.condition = 1;
+    Player.Yacceleration = Math.max(Player.Yacceleration || 0, GameData.jumpheight);
+    setGameState("running");
+    __rafId = window.requestAnimationFrame(startanimation);
+}
+
+function submitScore(name, score) {
+    try {
+        if (name) localStorage.setItem("jumpjumpgame.name", name);
+    } catch (e) {
+        // ignore
+    }
+
+    if (typeof $ !== "function") return;
+    $.ajax({
+        type: "POST",
+        async: true,
+        url: "https://phoenix-jump-backend.zhengnq.com/insert",
+        contentType: "application/json",
+        dataType: "json",
+        data: JSON.stringify({ name: name || "Anyomous User", score: score }),
+        error: function (jqXHR) {
+            console.info(jqXHR.responseText);
+        }
+    });
+}
+
+function showGameOver() {
+    cancelGameLoop();
+    setGameState("gameover");
+
+    if (__gameOverScoreEl) {
+        __gameOverScoreEl.textContent = "Score: " + parseInt(GameData.score);
+    }
+    if (__playerNameInput) {
+        var saved = "";
+        try {
+            saved = localStorage.getItem("jumpjumpgame.name") || "";
+        } catch (e) {
+            saved = "";
+        }
+        if (!__playerNameInput.value) __playerNameInput.value = saved;
+        __playerNameInput.focus();
+    }
+
+    renderStaticFrame();
+}
+
+function resetToMenu() {
+    cancelGameLoop();
+    resetGameData();
+    setGameState("menu");
+    if (__backgroundPattern) drawWelcomeScreen();
+}
+
 backgroundimg.onload = function (ev) {
     __backgroundPattern = context.createPattern(backgroundimg, "repeat");
     drawWelcomeScreen();
 
     alert("您好，欢迎来到跳跳游戏！排行榜已上线，快来挑战吧！\n请理性游戏，不要沉迷；请理性刷分，不要攻击数据库！\n衷心感谢您的游玩，您的愉悦是本游戏最大的荣幸！");
     
-    function startanimation() {
-        context.clearRect(0, 0, Width, Height);
+    __overlay = document.getElementById("overlay");
+    __roleSelect = __overlay ? __overlay.querySelector(".role-select") : null;
+    __pausePrompt = document.getElementById("pausePrompt");
+    __gameOverModal = document.getElementById("gameOverModal");
+    __gameOverScoreEl = document.getElementById("gameOverScore");
+    __playerNameInput = document.getElementById("playerNameInput");
+    __restartBTN = document.getElementById("restartBTN");
 
-        CreatePanel(context);
-        context.fillStyle = __backgroundPattern;
-        context.fillRect(0, 0, Width, Height);
-        context.font = "bold 20px Arial";
-        context.textAlign = "left";
-        context.fillStyle = "#ff2f98";
-        context.fillText("Score: " + parseInt(GameData.score), 20, 30);
-        // animation(context);
-        jump();
-        collide();
-        gamescroll();
-        move(context);
-
-        if (Player.y > Height) {
-            window.cancelAnimationFrame(startanimation);
-            var userName = prompt("Game Over!\nYour score is: " + parseInt(GameData.score) + "\n请留下尊姓大名!", "Anyomous User");
-            alert(userName+", 你的得分是: " + parseInt(GameData.score)+"\n太棒了! 再来一局吧?");
-
-            var userdata = {
-                name :        userName, 
-                score :       GameData.score
-            };
-            $.ajax({
-                type :        "POST",
-                async :       false,
-                url :         "https://phoenix-jump-backend.zhengnq.com/insert",
-                contentType : "application/json",
-                dataType :    "json",
-                data :        JSON.stringify(userdata),
-                error :       function(jqXHR, textStatus, errorThrown){
-                                  console.info(jqXHR.responseText);
-                              }
-            });
-
-            $.ajax({
-                 type :       "GET",
-                 async :      false,
-                 url :        "https://phoenix-jump-backend.zhengnq.com/query", 
-                 success :    function(scores){
-                                  alert(scores);
-                              },
-                 error :      function(jqXHR, textStatus, errorThrown){
-                                  console.info(jqXHR.responseText);
-                              }
-            });
-        
-            location.reload();
-        } else {
-            requestAnimationFrame(startanimation);
-            changeposition();
-        }
-
-    }
     var start1 = document.getElementById("startBTN");
     var start2 = document.getElementById("startBTN2");
-    var overlay = document.getElementById("overlay");
 
-    function beginGame(selectedChara) {
-        if (__gameStarted) return;
-
-        chara = selectedChara;
-        __gameStarted = true;
-
-        window.requestAnimationFrame(startanimation);
-        start1.style.display = "none";
-        start2.style.display = "none";
-        if (overlay) overlay.style.display = "none";
-
-        Player.x = Width / 2 - PLAYER_W / 2;
-        Player.y = Height - (selectedChara === 1 ? 220 : 170);
-
-        panelgroup.push({
-            x: Player.x + PLAYER_W / 2,
-            y: Player.y + 90,
-            status: 1,
-            pcolor: "#ff4aa6",
-            plength: 60
+    if (__restartBTN) {
+        __restartBTN.addEventListener("click", function () {
+            var name = (__playerNameInput && __playerNameInput.value) ? __playerNameInput.value.trim() : "";
+            if (name || GameData.score) {
+                submitScore(name || "Anyomous User", GameData.score);
+            }
+            resetToMenu();
         });
+        __restartBTN.addEventListener("touchstart", function (e) {
+            e.preventDefault();
+            var name = (__playerNameInput && __playerNameInput.value) ? __playerNameInput.value.trim() : "";
+            if (name || GameData.score) {
+                submitScore(name || "Anyomous User", GameData.score);
+            }
+            resetToMenu();
+        }, { passive: false });
     }
 
-    start1.addEventListener("click", function () {
-        beginGame(1);
-    });
-    start2.addEventListener("click", function () {
-        beginGame(2);
-    });
-    start1.addEventListener("touchstart", function (e) {
-        e.preventDefault();
-        beginGame(1);
-    }, { passive: false });
-    start2.addEventListener("touchstart", function (e) {
-        e.preventDefault();
-        beginGame(2);
-    }, { passive: false });
+    if (start1) {
+        start1.addEventListener("click", function () {
+            beginGame(1);
+        });
+        start1.addEventListener("touchstart", function (e) {
+            e.preventDefault();
+            beginGame(1);
+        }, { passive: false });
+    }
+    if (start2) {
+        start2.addEventListener("click", function () {
+            beginGame(2);
+        });
+        start2.addEventListener("touchstart", function (e) {
+            e.preventDefault();
+            beginGame(2);
+        }, { passive: false });
+    }
 
     var roleDoodle = document.getElementById("roleDoodle");
     var roleFrog = document.getElementById("roleFrog");
@@ -358,8 +489,35 @@ backgroundimg.onload = function (ev) {
         }, { passive: false });
     }
 
+    syncOverlayVisibility();
 };
 
+function startanimation() {
+    if (__gameState !== "running") return;
+
+    context.clearRect(0, 0, Width, Height);
+
+    CreatePanel(context);
+    context.fillStyle = __backgroundPattern;
+    context.fillRect(0, 0, Width, Height);
+    context.font = "bold 20px Arial";
+    context.textAlign = "left";
+    context.fillStyle = "#ff2f98";
+    context.fillText("Score: " + parseInt(GameData.score), 20, 30);
+
+    jump();
+    collide();
+    gamescroll();
+    move(context);
+
+    if (Player.y > Height) {
+        showGameOver();
+        return;
+    }
+
+    changeposition();
+    __rafId = window.requestAnimationFrame(startanimation);
+}
 
 function getLocation(x, y) {
     var bbox = canvas.getBoundingClientRect();
@@ -382,16 +540,22 @@ canvas.addEventListener("mousemove", function (e) {
 if (window.PointerEvent) {
     canvas.addEventListener("pointerdown", function (e) {
         setPointerFromClient(e.clientX, e.clientY);
+        startRunning();
     });
     canvas.addEventListener("pointermove", function (e) {
         setPointerFromClient(e.clientX, e.clientY);
     });
 }
 
+canvas.addEventListener("click", function () {
+    startRunning();
+});
+
 canvas.addEventListener("touchstart", function (e) {
     if (e.touches && e.touches[0]) {
         setPointerFromClient(e.touches[0].clientX, e.touches[0].clientY);
     }
+    startRunning();
     e.preventDefault();
 }, { passive: false });
 
